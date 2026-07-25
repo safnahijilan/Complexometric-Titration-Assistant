@@ -1,0 +1,1690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Complexometric Titration Assistant — EDTA Conditional Formation Constant</title>
+<style>
+/* ==========================================================================
+   DESIGN TOKENS
+   Palette is drawn from the titration bench itself:
+   - paper / ink   : the lab notebook page and pen
+   - teal          : the colour of the EDTA / metal-EBT complex before the
+                      endpoint is reached (used as the primary brand accent)
+   - wine          : Eriochrome Black T's wine-red colour (free indicator),
+                      reused as the "danger / not feasible" colour
+   - green         : the sky-blue-turned-green endpoint cue, reused as
+                      "success / feasible"
+   ========================================================================== */
+:root{
+  --paper:      #F5F1E6;
+  --paper-2:    #EFE9D8;
+  --ink:        #1E2A38;
+  --ink-soft:   #55636F;
+  --line:       rgba(30,42,56,0.14);
+  --teal:       #1F6F78;
+  --teal-dark:  #164F56;
+  --teal-tint:  #E4EEEC;
+  --wine:       #8C2F39;
+  --wine-tint:  #F6E7E7;
+  --green:      #2F6B4F;
+  --green-tint: #E3EEE6;
+  --gold:       #B4842E;
+  --shadow:     0 2px 10px rgba(30,42,56,0.08);
+  --radius:     10px;
+  --font-display: Georgia, 'Times New Roman', serif;
+  --font-body:    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-data:    ui-monospace, SFMono-Regular, "Courier New", monospace;
+}
+
+*{ box-sizing:border-box; }
+
+html{ scroll-behavior:smooth; }
+
+body{
+  margin:0;
+  background:
+    linear-gradient(var(--paper), var(--paper)) ,
+    repeating-linear-gradient(180deg, transparent, transparent 27px, var(--line) 28px);
+  background-blend-mode:normal;
+  color:var(--ink);
+  font-family:var(--font-body);
+  line-height:1.5;
+  padding-bottom:60px;
+}
+
+/* ---------------------------- header / hero ---------------------------- */
+header.hero{
+  background:
+    radial-gradient(1200px 300px at 10% -10%, rgba(31,111,120,0.14), transparent),
+    var(--ink);
+  color:var(--paper);
+  padding:38px 20px 30px;
+  border-bottom:6px solid var(--teal);
+}
+.hero-inner{ max-width:1080px; margin:0 auto; }
+.eyebrow{
+  font-family:var(--font-data);
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  font-size:12px;
+  color:#9FC6C9;
+  margin:0 0 8px;
+}
+h1.title{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:clamp(28px,4.4vw,42px);
+  margin:0 0 6px;
+  letter-spacing:-0.01em;
+}
+p.subtitle{
+  margin:0 0 22px;
+  max-width:640px;
+  color:#D7DEE2;
+  font-size:15.5px;
+}
+
+/* Signature element: live EDTA speciation ladder in the hero */
+.ladder-wrap{
+  background:rgba(245,241,230,0.06);
+  border:1px solid rgba(245,241,230,0.18);
+  border-radius:var(--radius);
+  padding:16px 18px 14px;
+  max-width:640px;
+}
+.ladder-label{
+  display:flex; justify-content:space-between; align-items:baseline;
+  font-family:var(--font-data); font-size:12.5px; color:#B9C3C8; margin-bottom:8px;
+}
+.ladder-label b{ color:var(--paper); font-size:14px; }
+#heroPhRange{ width:100%; accent-color:var(--teal); }
+.stack{
+  display:flex; width:100%; height:26px; border-radius:6px; overflow:hidden;
+  margin-top:10px; border:1px solid rgba(245,241,230,0.25);
+}
+.stack div{ height:100%; transition:width .25s ease; }
+.legend{
+  display:flex; flex-wrap:wrap; gap:10px 16px; margin-top:10px;
+  font-family:var(--font-data); font-size:11px; color:#C7CFD3;
+}
+.legend span{ display:inline-flex; align-items:center; gap:6px; }
+.legend i{ width:10px; height:10px; border-radius:2px; display:inline-block; }
+
+/* ------------------------------ layout ---------------------------------- */
+main{ max-width:1080px; margin:0 auto; padding:0 20px; }
+
+nav.tabs{
+  display:flex; flex-wrap:wrap; gap:8px;
+  margin:26px 0 22px;
+  position:sticky; top:0; z-index:5;
+  background:var(--paper);
+  padding:14px 0 10px;
+  border-bottom:1px solid var(--line);
+}
+.tab-btn{
+  font-family:var(--font-body);
+  font-size:14px; font-weight:600;
+  border:1px solid var(--line);
+  background:var(--paper-2);
+  color:var(--ink-soft);
+  padding:9px 15px;
+  border-radius:999px;
+  cursor:pointer;
+  transition:all .15s ease;
+}
+.tab-btn:hover{ border-color:var(--teal); color:var(--teal-dark); }
+.tab-btn.active{
+  background:var(--teal); color:#fff; border-color:var(--teal);
+  box-shadow:var(--shadow);
+}
+
+section.panel{ display:none; animation:fadeIn .25s ease; }
+section.panel.active{ display:block; }
+@keyframes fadeIn{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+
+.panel-intro{
+  font-size:14.5px; color:var(--ink-soft); max-width:760px; margin:0 0 18px;
+}
+.panel-intro b{ color:var(--ink); }
+
+/* ------------------------------- cards ----------------------------------- */
+.card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:20px 22px;
+  margin-bottom:18px;
+  box-shadow:var(--shadow);
+}
+.card h2, .card h3{
+  font-family:var(--font-display);
+  margin:0 0 12px;
+  font-size:19px;
+  color:var(--ink);
+  display:flex; align-items:center; gap:9px;
+}
+.card h2 .num, .card h3 .num{
+  font-family:var(--font-data);
+  font-size:12px;
+  background:var(--teal); color:#fff;
+  border-radius:50%;
+  width:22px; height:22px;
+  display:inline-flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+
+.field-grid{
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr));
+  gap:14px 16px; margin-bottom:6px;
+}
+.field label{
+  display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft);
+  margin-bottom:5px; text-transform:uppercase; letter-spacing:.03em;
+}
+.field small.help{
+  display:block; margin-top:4px; font-size:11.5px; color:var(--ink-soft); font-weight:400;
+  text-transform:none; letter-spacing:0;
+}
+.field input, .field select{
+  width:100%; padding:9px 10px;
+  border:1px solid var(--line); border-radius:6px;
+  font-family:var(--font-data); font-size:14.5px;
+  background:var(--paper-2); color:var(--ink);
+}
+.field input:focus, .field select:focus{
+  outline:2px solid var(--teal); outline-offset:1px; background:#fff;
+}
+
+.btn{
+  font-family:var(--font-body); font-weight:700; font-size:14px;
+  background:var(--teal); color:#fff; border:none;
+  padding:10px 20px; border-radius:7px; cursor:pointer;
+  margin-top:6px;
+  transition:background .15s ease, transform .05s ease;
+}
+.btn:hover{ background:var(--teal-dark); }
+.btn:active{ transform:translateY(1px); }
+.btn.secondary{
+  background:transparent; color:var(--teal-dark); border:1px solid var(--teal);
+}
+.btn.secondary:hover{ background:var(--teal-tint); }
+.btn:disabled{ background:#B9C3C8; cursor:not-allowed; }
+
+.error-msg{
+  color:var(--wine); background:var(--wine-tint);
+  border:1px solid rgba(140,47,57,0.3);
+  padding:9px 12px; border-radius:6px; font-size:13.5px;
+  margin-top:10px; display:none;
+}
+.error-msg.show{ display:block; }
+
+/* ---------------------------- working / steps ---------------------------- */
+.steps{
+  background:var(--paper-2); border:1px dashed var(--line);
+  border-radius:8px; padding:14px 16px; margin-top:4px;
+  font-family:var(--font-data); font-size:13.5px; line-height:1.9;
+  white-space:pre-wrap;
+}
+.steps .step-line{ display:block; }
+.steps .eq{ color:var(--teal-dark); font-weight:700; }
+
+/* ---------------------------- explanation -------------------------------- */
+.explain{
+  background:var(--teal-tint); border-left:4px solid var(--teal);
+  border-radius:0 8px 8px 0; padding:12px 16px; margin-top:4px; font-size:14px;
+}
+.explain b{ color:var(--teal-dark); }
+
+/* ------------------------------ decision --------------------------------- */
+.decision{
+  border-radius:8px; padding:16px 18px; margin-top:4px;
+  font-size:15.5px; font-weight:700; display:flex; align-items:center; gap:10px;
+}
+.decision.pass{ background:var(--green-tint); color:var(--green); border:1px solid rgba(47,107,79,0.3); }
+.decision.fail{ background:var(--wine-tint); color:var(--wine); border:1px solid rgba(140,47,57,0.3); }
+.decision .sub{ display:block; font-weight:400; font-size:13px; margin-top:4px; color:var(--ink-soft); }
+
+.hidden{ display:none !important; }
+
+/* ------------------------- final answer card ------------------------------ */
+/* This is the closing card every Mode produces: numerical answer, a short
+   chemical-conclusion recap, the interpretation, the lab meaning, and a
+   recommendation. It is colour-coded the same way as .decision (pass/fail),
+   or neutral teal when a mode has no feasibility verdict of its own. */
+.final-card{
+  border-radius:var(--radius);
+  padding:4px 22px 20px;
+  margin-top:4px;
+}
+.final-card.neutral{ background:var(--teal-tint); border:1px solid rgba(31,111,120,0.3); }
+.final-card.pass{ background:var(--green-tint); border:1px solid rgba(47,107,79,0.3); }
+.final-card.fail{ background:var(--wine-tint); border:1px solid rgba(140,47,57,0.3); }
+
+.final-card .final-heading{
+  font-family:var(--font-display); font-size:19px; margin:16px 0 12px;
+  display:flex; align-items:center; gap:9px;
+}
+.final-card.neutral .final-heading{ color:var(--teal-dark); }
+.final-card.pass .final-heading{ color:var(--green); }
+.final-card.fail .final-heading{ color:var(--wine); }
+
+.final-section{ margin-bottom:14px; }
+.final-section:last-child{ margin-bottom:0; }
+.final-section .final-label{
+  font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+  color:var(--ink-soft); margin-bottom:5px; display:flex; align-items:center; gap:6px;
+}
+.final-section .final-body{
+  font-size:14.5px; color:var(--ink); background:rgba(255,255,255,0.55);
+  border-radius:7px; padding:10px 12px;
+}
+.final-section .final-body.mono{ font-family:var(--font-data); white-space:pre-wrap; line-height:1.8; font-size:13.5px; }
+.final-section .final-body strong{ font-family:var(--font-data); }
+
+/* ------------------------------- tables ---------------------------------- */
+table.data{
+  width:100%; border-collapse:collapse; margin-top:8px; font-size:13.5px;
+}
+table.data th, table.data td{
+  border:1px solid var(--line); padding:8px 10px; text-align:center;
+  font-family:var(--font-data);
+}
+table.data th{
+  background:var(--ink); color:var(--paper); font-family:var(--font-body);
+  font-size:12px; text-transform:uppercase; letter-spacing:.03em;
+}
+table.data td.pass{ background:var(--green-tint); color:var(--green); font-weight:700; }
+table.data td.fail{ background:var(--wine-tint); color:var(--wine); font-weight:700; }
+table.data tr:nth-child(even) td{ background:rgba(0,0,0,0.02); }
+table.data td.pass, table.data td.fail{ background-blend-mode:normal; }
+
+/* --------------------------- accordion (learn) --------------------------- */
+.accordion-item{ border:1px solid var(--line); border-radius:8px; margin-bottom:10px; overflow:hidden; }
+.accordion-head{
+  background:var(--paper-2); padding:13px 16px; cursor:pointer;
+  display:flex; justify-content:space-between; align-items:center;
+  font-weight:700; font-size:14.5px;
+}
+.accordion-head:hover{ background:var(--teal-tint); }
+.accordion-head .chevron{ transition:transform .2s ease; color:var(--teal); font-family:var(--font-data); }
+.accordion-item.open .chevron{ transform:rotate(90deg); }
+.accordion-body{ max-height:0; overflow:hidden; transition:max-height .25s ease; }
+.accordion-item.open .accordion-body{ max-height:600px; }
+.accordion-body-inner{ padding:4px 16px 16px; font-size:14px; color:var(--ink-soft); }
+.accordion-body-inner b{ color:var(--ink); }
+.accordion-body-inner ul{ margin:8px 0; padding-left:20px; }
+
+/* ------------------------------- misc ------------------------------------ */
+.badge{
+  display:inline-block; font-family:var(--font-data); font-size:11px;
+  background:var(--gold); color:#fff; padding:2px 8px; border-radius:4px; margin-left:8px;
+}
+.two-col{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+@media (max-width:700px){ .two-col{ grid-template-columns:1fr; } }
+
+footer{
+  max-width:1080px; margin:30px auto 0; padding:18px 20px 0;
+  border-top:1px solid var(--line); color:var(--ink-soft); font-size:12.5px;
+}
+
+/* ------------------------- V2: ligand config card ------------------------- */
+.ligand-card{
+  background:rgba(245,241,230,0.06);
+  border:1px solid rgba(245,241,230,0.18);
+  border-radius:var(--radius);
+  padding:16px 18px;
+  max-width:640px;
+  margin-top:12px;
+}
+.ligand-card .lc-title{
+  font-family:var(--font-data); font-size:12.5px; letter-spacing:.08em; text-transform:uppercase;
+  color:#B9C3C8; margin-bottom:10px;
+}
+.ligand-row{ display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; }
+.ligand-field{ flex:1 1 150px; min-width:140px; }
+.ligand-field label{
+  display:block; font-size:11px; font-weight:600; color:#B9C3C8;
+  margin-bottom:4px; text-transform:uppercase; letter-spacing:.03em;
+}
+.ligand-field input, .ligand-field select{
+  width:100%; padding:8px 9px; border-radius:6px; border:1px solid rgba(245,241,230,0.25);
+  background:rgba(245,241,230,0.08); color:var(--paper); font-family:var(--font-data); font-size:13.5px;
+}
+.ligand-field input::placeholder{ color:rgba(245,241,230,0.4); }
+.ligand-field select option{ color:var(--ink); }
+.ligand-note{ font-size:11.5px; color:#A9B4B9; margin-top:8px; line-height:1.6; }
+.ligand-note b{ color:var(--paper); }
+
+/* percentage labels under the speciation stack */
+.pct-row{ display:flex; width:100%; margin-top:6px; }
+.pct-row div{ text-align:center; font-family:var(--font-data); font-size:10.5px; color:#C7CFD3; }
+
+/* ---------------------------- clickable terms ----------------------------- */
+.term{
+  border-bottom:1.5px dotted var(--teal);
+  cursor:help;
+  color:var(--teal-dark);
+  font-weight:600;
+}
+.term:hover{ background:var(--teal-tint); }
+header .term{ border-bottom-color:#9FC6C9; color:#CFEAE8; }
+header .term:hover{ background:rgba(255,255,255,0.08); }
+
+#termPopover{
+  position:fixed; z-index:50; max-width:290px;
+  background:var(--ink); color:var(--paper);
+  border-radius:8px; padding:12px 14px; font-size:13px; line-height:1.55;
+  box-shadow:0 8px 24px rgba(0,0,0,0.25);
+  display:none;
+}
+#termPopover.show{ display:block; }
+#termPopover .tp-title{ font-weight:700; color:#9FC6C9; margin-bottom:4px; font-family:var(--font-data); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+#termPopover .tp-close{ float:right; cursor:pointer; color:#B9C3C8; font-weight:700; }
+
+/* ------------------------------ suitability tiers -------------------------- */
+td.tier-none{ background:var(--wine-tint); color:var(--wine); font-weight:700; }
+td.tier-ok{ background:#FFF4DC; color:var(--gold); font-weight:700; }
+td.tier-high{ background:var(--green-tint); color:var(--green); font-weight:700; }
+
+.range-badge{
+  border-radius:8px; padding:14px 16px; margin-top:12px;
+  background:var(--green-tint); border:1px solid rgba(47,107,79,0.3);
+  color:var(--green); font-size:14.5px; font-weight:600; line-height:1.6;
+}
+.range-badge.none{ background:var(--wine-tint); border-color:rgba(140,47,57,0.3); color:var(--wine); }
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation:none !important; transition:none !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================== HEADER / HERO ============================== -->
+<header class="hero">
+  <div class="hero-inner">
+    <p class="eyebrow">Analytical Chemistry &middot; First-Year Learning Tool</p>
+    <h1 class="title">Complexometric Titration Assistant</h1>
+    <p class="subtitle">An interactive decision-support tool for EDTA complexometric titrations. Explore how pH controls EDTA's availability to bind metal ions, and whether a titration can be done quantitatively.</p>
+
+    <div class="ligand-card">
+      <div class="lc-title">Chelating agent configuration &middot; applies to every mode below</div>
+      <div class="ligand-row">
+        <div class="ligand-field">
+          <label for="ligandPreset">Preset</label>
+          <select id="ligandPreset" onchange="onLigandPresetChange()">
+            <option value="EDTA">EDTA (tetraprotic)</option>
+            <option value="NTA">NTA (tetraprotic model)</option>
+            <option value="EGTA">EGTA (tetraprotic)</option>
+            <option value="DTPA">DTPA (5 pKa)</option>
+            <option value="CUSTOM">Custom ligand&hellip;</option>
+          </select>
+        </div>
+        <div class="ligand-field">
+          <label for="ligandName">Ligand name (used in every answer)</label>
+          <input type="text" id="ligandName" value="EDTA" oninput="onLigandNameEdit()">
+        </div>
+        <div class="ligand-field hidden" id="ligandCustomPkaField">
+          <label for="ligandCustomPka">Custom pKa values (comma-separated, low&rarr;high)</label>
+          <input type="text" id="ligandCustomPka" placeholder="e.g. 2.0, 2.7, 6.2, 10.3" oninput="onLigandCustomPka()">
+        </div>
+      </div>
+      <div class="ligand-note" id="ligandNote">Using EDTA's four literature pKa values (2.00, 2.67, 6.16, 10.26). Choose a preset or enter your own ligand's pKa values to model a different chelating agent &mdash; the same &alpha;<sub>(H)</sub> / K&prime; equations are reused automatically.</div>
+    </div>
+
+    <div class="ladder-wrap">
+      <div class="ladder-label">
+        <span>Live demo — <span id="heroLigandLabel">EDTA</span> speciation at <b id="heroPhReadout">pH 5.0</b></span>
+        <span>Try the slider &rarr;</span>
+      </div>
+      <input type="range" id="heroPhRange" min="0" max="14" step="0.1" value="5">
+      <div class="stack" id="heroStack"></div>
+      <div class="pct-row" id="heroPctRow"></div>
+      <div class="legend" id="heroLegend"></div>
+      <div class="ligand-note" id="heroSpeciesExplain" style="margin-top:12px;"></div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============================== PROJECT INTRODUCTION ============================== -->
+  <section class="card" id="introCard">
+    <h2><span class="num">i</span>About This Project</h2>
+    <div style="font-size:14.5px; color:var(--ink); line-height:1.7;">
+      <p style="margin:0 0 10px;"><b>Complexometric Titration Assistant</b> &middot; developed by a Chemical Engineering undergraduate as an educational, portfolio-ready analytical chemistry tool.</p>
+      <p style="margin:0 0 10px;"><b>Purpose:</b> This tool helps students understand metal&ndash;ligand complex formation, conditional formation constants, and the effect of pH on complexometric titrations &mdash; not just to calculate a number, but to see the full reasoning chain a chemist follows: chemical information &rarr; equilibrium calculation &rarr; conditional stability analysis &rarr; numerical result &rarr; chemical explanation &rarr; laboratory decision &rarr; recommendation.</p>
+      <p style="margin:0;"><b>Why K&prime; matters:</b> The intrinsic formation constant (K) does not always represent real experimental conditions, because ligand availability changes with pH. The <b>conditional formation constant (K&prime;)</b> corrects for this, so it &mdash; not K &mdash; is what actually predicts whether a titration will succeed on the bench.</p>
+    </div>
+  </section>
+
+  <!-- ============================== MODEL ASSUMPTIONS & LIMITATIONS ============================== -->
+  <section class="card" id="assumptionsCard">
+    <h2><span class="num">!</span>Model Assumptions &amp; Limitations</h2>
+    <div class="two-col">
+      <div>
+        <div class="final-label" style="margin-bottom:8px;">This tool's calculations assume:</div>
+        <ul style="margin:0 0 0 4px; padding-left:18px; font-size:14px; color:var(--ink); line-height:1.9;">
+          <li>&#10003; 1:1 metal&ndash;ligand complex formation</li>
+          <li>&#10003; Equilibrium conditions are reached</li>
+          <li>&#10003; Formation constants (log K) are accurate</li>
+          <li>&#10003; Side reactions are neglected</li>
+        </ul>
+      </div>
+      <div>
+        <div class="final-label" style="margin-bottom:8px;">Real laboratory systems may also be affected by:</div>
+        <ul style="margin:0 0 0 4px; padding-left:18px; font-size:14px; color:var(--ink-soft); line-height:1.9;">
+          <li>Competing ions</li>
+          <li>Temperature</li>
+          <li>Ionic strength</li>
+          <li>Precipitation reactions</li>
+          <li>Metal hydrolysis</li>
+        </ul>
+      </div>
+    </div>
+    <div class="explain" style="margin-top:14px;">
+      This tool provides <b>theoretical guidance</b> based on idealised equilibrium chemistry. Experimental conditions must always be considered and verified against your course's reference tables before use in a laboratory report.
+    </div>
+  </section>
+
+  <!-- ============================== MODE NAVIGATION ============================== -->
+  <nav class="tabs" id="tabNav">
+    <button class="tab-btn active" data-panel="mode1">1 &middot; Conditional K&prime;</button>
+    <button class="tab-btn" data-panel="mode2">2 &middot; Is titration feasible?</button>
+    <button class="tab-btn" data-panel="mode3">3 &middot; Find a suitable pH</button>
+    <button class="tab-btn" data-panel="mode4">4 &middot; Compare metals</button>
+    <button class="tab-btn" data-panel="learn">Learn the variables</button>
+  </nav>
+
+  <!-- ============================== MODE 1 ============================== -->
+  <section class="panel active" id="mode1">
+    <p class="panel-intro"><b>Question this mode answers:</b> "I know the intrinsic formation constant (K) and the EDTA side-reaction factor &alpha;<sub>Y(H)</sub> at my working pH — how stable is the complex <i>really</i>, once pH is taken into account?"</p>
+
+    <div class="card">
+      <h2><span class="num">1</span>Input Parameters</h2>
+      <div class="field-grid">
+        <div class="field">
+          <label for="m1_metalName">Metal ion name <span style="text-transform:none; font-weight:400;">(optional)</span></label>
+          <input type="text" id="m1_metalName" placeholder="e.g. Zn²⁺">
+          <small class="help">Used only to personalise the explanation below — not in the maths.</small>
+        </div>
+        <div class="field">
+          <label for="m1_pH"><span class="term" onclick="showTerm(event,'pH')">pH</span> condition</label>
+          <input type="number" id="m1_pH" step="0.1" min="0" max="14" placeholder="e.g. 5.0">
+          <small class="help">The buffered pH at which the titration will actually be run.</small>
+        </div>
+        <div class="field">
+          <label for="m1_logK"><span class="term" onclick="showTerm(event,'logK')">log K</span> (intrinsic formation constant)</label>
+          <input type="number" id="m1_logK" step="any" placeholder="e.g. 16.50">
+          <small class="help">From a stability-constant table for your metal&ndash;ligand pair.</small>
+        </div>
+        <div class="field">
+          <label for="m1_logAlpha"><span class="term" onclick="showTerm(event,'alpha')">log &alpha;<sub>(H)</sub></span> at that pH</label>
+          <input type="number" id="m1_logAlpha" step="any" placeholder="e.g. 6.45">
+          <small class="help">Read from an &alpha;<sub>Y(H)</sub> vs pH table for the pH above.</small>
+        </div>
+        <div class="field">
+          <label for="m1_conc">Metal concentration <span class="term" onclick="showTerm(event,'conc')">[M]</span>, mol/L <span style="text-transform:none; font-weight:400;">(optional)</span></label>
+          <input type="number" id="m1_conc" step="any" placeholder="e.g. 0.01">
+          <small class="help">Add this too, and the Final Answer card below will also judge titration feasibility.</small>
+        </div>
+      </div>
+      <button class="btn" onclick="runMode1()">Calculate K&prime;</button>
+      <button class="btn secondary" onclick="loadExample()">Load Example</button>
+      <button class="btn secondary" onclick="resetMode1()">Reset</button>
+      <div class="error-msg" id="m1_error"></div>
+    </div>
+
+    <div class="card hidden" id="m1_results">
+      <h3><span class="num">2</span>Calculation Working</h3>
+      <div class="steps" id="m1_steps"></div>
+
+      <h3 style="margin-top:18px;"><span class="num">3</span>Chemical Explanation</h3>
+      <div class="explain" id="m1_explain">
+        The <b>conditional formation constant K&prime;</b> is the "real-world" stability of the metal&ndash;EDTA complex at your chosen pH. It is always <b>smaller</b> than the intrinsic K, because at any pH other than very high pH, some EDTA is tied up as its protonated forms (H&#8324;Y, H&#8323;Y&#8315;, etc.) and is not available to bind the metal — only the fully deprotonated Y&#8308;&#8315; form binds metal ions strongly. K&prime; tells you how the titration will actually behave on the bench, not in an idealised, fully-deprotonated system.
+      </div>
+
+      <div class="final-card neutral" id="m1_finalCard">
+        <h3 class="final-heading"><span class="num">4</span>Final Answer</h3>
+        <div class="final-section">
+          <div class="final-label">Exact numerical answer</div>
+          <div class="final-body mono" id="m1_final_num"></div>
+        </div>
+        <div class="final-section">
+          <div class="final-label">Final chemical interpretation</div>
+          <div class="final-body" id="m1_final_interp"></div>
+        </div>
+        <div class="final-section">
+          <div class="final-label">Laboratory meaning</div>
+          <div class="final-body" id="m1_final_lab"></div>
+        </div>
+        <div class="final-section">
+          <div class="final-label">Recommendation</div>
+          <div class="final-body" id="m1_final_reco"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== MODE 2 ============================== -->
+  <section class="panel" id="mode2">
+    <p class="panel-intro"><b>Question this mode answers:</b> "I have a conditional formation constant K&prime; and I know my metal ion's concentration — can I actually titrate it quantitatively with EDTA?"</p>
+
+    <div class="card">
+      <h2><span class="num">1</span>Input Parameters</h2>
+      <div class="field-grid">
+        <div class="field">
+          <label for="m2_metalName">Metal ion name <span style="text-transform:none; font-weight:400;">(optional)</span></label>
+          <input type="text" id="m2_metalName" placeholder="e.g. Zn²⁺">
+          <small class="help">Used only to personalise the laboratory meaning below.</small>
+        </div>
+        <div class="field">
+          <label for="m2_logKp"><span class="term" onclick="showTerm(event,'Kprime')">log K&prime;</span> (conditional formation constant)</label>
+          <input type="number" id="m2_logKp" step="any" placeholder="e.g. 10.05">
+          <small class="help">Use the log K&prime; you found in Mode 1, or enter your own.</small>
+        </div>
+        <div class="field">
+          <label for="m2_conc">Metal ion concentration <span class="term" onclick="showTerm(event,'conc')">[M]</span> (mol/L)</label>
+          <input type="number" id="m2_conc" step="any" placeholder="e.g. 0.01">
+          <small class="help">The analytical (formal) concentration of the metal ion at the equivalence point.</small>
+        </div>
+      </div>
+      <button class="btn" onclick="runMode2()">Check Feasibility</button>
+      <div class="error-msg" id="m2_error"></div>
+    </div>
+
+    <div class="card hidden" id="m2_results">
+      <h3><span class="num">2</span>Calculation Working</h3>
+      <div class="steps" id="m2_steps"></div>
+
+      <h3 style="margin-top:18px;"><span class="num">3</span>Chemical Explanation</h3>
+      <div class="explain">
+        The product <b class="term" onclick="showTerm(event,'KM')">K&prime;&times;[M]</b> compares how strongly the complex forms against how concentrated the metal is. The rule-of-thumb threshold <b>K&prime;[M] &gt; 10&#8310;</b> means the reaction goes essentially to completion (&ge;99.9%) right around the equivalence point, which is what gives a sharp, well-defined colour-change or potentiometric endpoint. Below this threshold, the reaction is too incomplete near the equivalence point, and the endpoint will be gradual and unreliable.
+      </div>
+
+      <div class="final-card neutral" id="m2_finalCard">
+        <h3 class="final-heading"><span class="num">4</span>Final Answer</h3>
+        <div class="final-section">
+          <div class="final-label">Exact numerical answer</div>
+          <div class="final-body mono" id="m2_final_num"></div>
+        </div>
+        <div class="final-section">
+          <div class="final-label">Step-by-step chemical conclusion</div>
+          <div class="final-body mono" id="m2_final_conclusion"></div>
+        </div>
+        <div class="final-section">
+          <div class="final-label">Final chemical interpretation</div>
+          <div class="final-body" id="m2_final_interp"></div>
+        </div>
+        <div class="final-section">
+          <div class="final-label">Laboratory meaning</div>
+          <div class="final-body" id="m2_final_lab"></div>
+        </div>
+        <div class="final-section">
+          <div class="final-label">Recommendation</div>
+          <div class="final-body" id="m2_final_reco"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== MODE 3 ============================== -->
+  <section class="panel" id="mode3">
+    <p class="panel-intro"><b>Question this mode answers:</b> "I know my metal ion and its intrinsic log K — at what pH will the titration actually work?" Enter a metal and concentration, then try different pH values to see how feasibility changes.</p>
+
+    <div class="card">
+      <h2><span class="num">1</span>Input Parameters</h2>
+      <div class="field-grid">
+        <div class="field">
+          <label for="m3_metal">Metal ion</label>
+          <select id="m3_metal" onchange="onMetalPreset('m3')">
+            <option value="">— custom log K —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="m3_metalName">Metal ion name <span style="text-transform:none; font-weight:400;">(optional, for custom log K)</span></label>
+          <input type="text" id="m3_metalName" placeholder="e.g. Zn²⁺">
+        </div>
+        <div class="field">
+          <label for="m3_logK"><span class="term" onclick="showTerm(event,'logK')">log K</span> (intrinsic)</label>
+          <input type="number" id="m3_logK" step="any" placeholder="e.g. 16.50">
+        </div>
+        <div class="field">
+          <label for="m3_conc">Metal ion concentration <span class="term" onclick="showTerm(event,'conc')">[M]</span> (mol/L)</label>
+          <input type="number" id="m3_conc" step="any" value="0.01">
+        </div>
+        <div class="field">
+          <label for="m3_pH"><span class="term" onclick="showTerm(event,'pH')">pH</span> to test</label>
+          <input type="number" id="m3_pH" step="0.1" min="0" max="14" placeholder="e.g. 5.0">
+        </div>
+      </div>
+      <button class="btn" onclick="addPhRow()">Add this pH to comparison</button>
+      <button class="btn secondary" onclick="autoScanPh()">Auto-scan pH 0 &ndash; 14</button>
+      <button class="btn secondary" onclick="resetPhTable()">Clear table</button>
+      <div class="error-msg" id="m3_error"></div>
+    </div>
+
+    <div class="card hidden" id="m3_results">
+      <h3><span class="num">2</span>pH Analysis — Working &amp; Comparison</h3>
+      <div class="steps" id="m3_lastSteps"></div>
+      <table class="data" id="m3_table">
+        <thead>
+          <tr><th>pH</th><th class="term" onclick="showTerm(event,'alpha')">log &alpha;<sub>(H)</sub></th><th class="term" onclick="showTerm(event,'Kprime')">log K&prime;</th><th>K&prime;</th><th>K&prime;&times;[M]</th><th>Feasible?</th><th>Suitability</th></tr>
+        </thead>
+        <tbody id="m3_tbody"></tbody>
+      </table>
+
+      <div class="range-badge hidden" id="m3_rangeBadge"></div>
+
+      <h3 style="margin-top:18px;"><span class="num">3</span>Chemical Explanation</h3>
+      <div class="explain" id="m3_explain">
+        Raising the pH removes protons from the chelating agent, shifting its speciation toward the fully deprotonated, metal-binding form. This lowers &alpha;<sub>(H)</sub> and raises K&prime;, generally making the titration <i>more</i> feasible at higher pH — but only up to the point where the metal itself starts to precipitate as a hydroxide, which this simple tool does not check for. Use the table above (or the auto-scan) to find the lowest pH at which K&prime;[M] first clears the 10&#8310; threshold; that is typically the practical lower pH limit for the titration.
+      </div>
+
+      <div class="final-card neutral" id="m3_finalCard">
+        <h3 class="final-heading"><span class="num">4</span>Final Answer <span style="font-size:12px; font-weight:400; text-transform:none; font-family:var(--font-body);">(most recent pH tested)</span></h3>
+        <div class="final-section">
+          <div class="final-label">Exact numerical answer</div>
+          <div class="final-body mono" id="m3_final_num"></div>
+        </div>
+        <div class="final-section">
+          <div class="final-label">Final chemical interpretation</div>
+          <div class="final-body" id="m3_final_interp"></div>
+        </div>
+        <div class="final-section">
+          <div class="final-label">Laboratory meaning</div>
+          <div class="final-body" id="m3_final_lab"></div>
+        </div>
+        <div class="final-section">
+          <div class="final-label">Recommendation</div>
+          <div class="final-body" id="m3_final_reco"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== MODE 4 ============================== -->
+  <section class="panel" id="mode4">
+    <p class="panel-intro"><b>Question this mode answers:</b> "How do different metal ions compare, at the same pH and concentration, in terms of how well they can be titrated with EDTA?"</p>
+
+    <div class="card">
+      <h2><span class="num">1</span>Input Parameters</h2>
+      <div class="field-grid">
+        <div class="field" style="grid-column:1 / -1;">
+          <label>Select metal ions to compare</label>
+          <div id="m4_checkboxes" style="display:flex; flex-wrap:wrap; gap:14px; padding:6px 0;"></div>
+        </div>
+        <div class="field">
+          <label for="m4_pH">Titration <span class="term" onclick="showTerm(event,'pH')">pH</span></label>
+          <input type="number" id="m4_pH" step="0.1" min="0" max="14" value="10">
+        </div>
+        <div class="field">
+          <label for="m4_conc">Metal concentration <span class="term" onclick="showTerm(event,'conc')">[M]</span> (mol/L), all metals</label>
+          <input type="number" id="m4_conc" step="any" value="0.01">
+        </div>
+      </div>
+      <button class="btn" onclick="runMode4()">Compare Selected Metals</button>
+      <div class="error-msg" id="m4_error"></div>
+    </div>
+
+    <div class="card hidden" id="m4_results">
+      <h3><span class="num">2</span>Comparison Table</h3>
+      <table class="data" id="m4_table">
+        <thead>
+          <tr><th>Metal</th><th>pH condition</th><th class="term" onclick="showTerm(event,'logK')">log K</th><th class="term" onclick="showTerm(event,'alpha')">log &alpha;<sub>(H)</sub></th><th class="term" onclick="showTerm(event,'Kprime')">log K&prime;</th><th>K&prime;</th><th>K&prime;&times;[M]</th><th>Feasible?</th></tr>
+        </thead>
+        <tbody id="m4_tbody"></tbody>
+      </table>
+
+      <h3 style="margin-top:18px;"><span class="num">3</span>Chemical Explanation</h3>
+      <div class="explain" id="m4_explain">
+        At a fixed pH, all metals share the same &alpha;<sub>(H)</sub>, so differences in feasibility come entirely from differences in intrinsic <b>log K</b>. Metals with weak intrinsic complexes with the chelating agent (e.g. Mg&sup2;&#8314;, Ca&sup2;&#8314;) generally need a <i>higher</i> pH to be titrated successfully, while metals with very strong complexes (e.g. Fe&sup3;&#8314;, Cu&sup2;&#8314;) can be titrated even at low pH — which is also how selective, pH-controlled titrations of metal mixtures are designed in the lab.
+      </div>
+
+      <div class="final-card neutral" id="m4_finalCard">
+        <h3 class="final-heading"><span class="num">4</span>Final Answer &amp; Recommendation</h3>
+        <div class="final-section">
+          <div class="final-label">Final chemical interpretation</div>
+          <div class="final-body" id="m4_final_interp"></div>
+        </div>
+        <div class="final-section">
+          <div class="final-label">Laboratory meaning</div>
+          <div class="final-body" id="m4_final_lab"></div>
+        </div>
+        <div class="final-section">
+          <div class="final-label">Recommendation</div>
+          <div class="final-body" id="m4_final_reco"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== LEARN ============================== -->
+  <section class="panel" id="learn">
+    <p class="panel-intro">Click each term to expand it. Understanding these five variables is the key to understanding everything the calculators above do.</p>
+
+    <div class="card">
+      <div class="accordion-item">
+        <div class="accordion-head" onclick="toggleAccordion(this)">
+          1. Formation constant, K <span class="chevron">&#9656;</span>
+        </div>
+        <div class="accordion-body"><div class="accordion-body-inner">
+          <b>Meaning:</b> K describes the intrinsic strength of binding between a metal ion and a ligand (here, EDTA), for the reaction M + Y &#8652; MY, assuming the ligand is 100% in its most reactive, fully deprotonated form.
+          <ul>
+            <li><b>Large K</b> (e.g. 10&sup1;&#8312;&#8323;&sup1;&#8320;): a strong, very stable complex.</li>
+            <li><b>Small K</b> (e.g. 10&#8312;&#8320;&#8320;&#8322;&#8322;): a weak complex that can dissociate easily.</li>
+          </ul>
+          K is a fixed, tabulated number for a given metal–ligand pair — it does not change with pH.
+        </div></div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-head" onclick="toggleAccordion(this)">
+          2. Conditional formation constant, K&prime; <span class="chevron">&#9656;</span>
+        </div>
+        <div class="accordion-body"><div class="accordion-body-inner">
+          <b>Meaning:</b> K&prime; is the <i>real</i>, effective stability of the complex under your actual experimental conditions — mainly pH. It corrects K for the fact that not all EDTA is present as the reactive Y&#8308;&#8315; species.
+          <ul>
+            <li>K&prime; is always &le; K.</li>
+            <li>K&prime; is the number that actually determines whether your titration curve has a sharp endpoint.</li>
+          </ul>
+          Formula used in this tool: <b>log K&prime; = log K &minus; log &alpha;<sub>Y(H)</sub></b>
+        </div></div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-head" onclick="toggleAccordion(this)">
+          3. &alpha;<sub>Y(H)</sub> — the EDTA side-reaction (availability) factor <span class="chevron">&#9656;</span>
+        </div>
+        <div class="accordion-body"><div class="accordion-body-inner">
+          <b>Meaning:</b> &alpha;<sub>Y(H)</sub> is a correction factor representing how much of the total dissolved EDTA is "tied up" as protonated forms instead of being available as Y&#8308;&#8315;.
+          <p>EDTA exists in solution as a mixture of protonation states, depending on pH:</p>
+          <ul>
+            <li>H&#8324;Y (fully protonated)</li>
+            <li>H&#8323;Y&#8315;</li>
+            <li>H&#8322;Y&sup2;&#8315;</li>
+            <li>HY&sup3;&#8315;</li>
+            <li>Y&#8308;&#8315; (fully deprotonated — the only form that binds metal ions strongly)</li>
+          </ul>
+          <ul>
+            <li><b>Low pH:</b> more protonated EDTA, less Y&#8308;&#8315;, <b>larger</b> &alpha;<sub>Y(H)</sub>, <b>lower</b> K&prime;.</li>
+            <li><b>High pH:</b> more Y&#8308;&#8315;, <b>smaller</b> &alpha;<sub>Y(H)</sub> (approaching 1), <b>higher</b> K&prime;.</li>
+          </ul>
+          This tool calculates &alpha;<sub>Y(H)</sub> directly from EDTA's four stepwise acid dissociation constants (pK<sub>a1</sub>=2.00, pK<sub>a2</sub>=2.67, pK<sub>a3</sub>=6.16, pK<sub>a4</sub>=10.26), so every pH you enter gives an internally-consistent value — see the speciation ladder at the top of the page.
+        </div></div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-head" onclick="toggleAccordion(this)">
+          4. pH <span class="chevron">&#9656;</span>
+        </div>
+        <div class="accordion-body"><div class="accordion-body-inner">
+          <b>Meaning:</b> pH controls how many protons are attached to each EDTA molecule, and therefore controls how much Y&#8308;&#8315; is available to complex the metal ion. In complexometric titrations, pH is usually fixed with a buffer (e.g. NH&#8323;/NH&#8324;Cl at pH&#8776;10 for many metal ions) precisely so that &alpha;<sub>Y(H)</sub> — and hence K&prime; — stays constant throughout the titration.
+        </div></div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-head" onclick="toggleAccordion(this)">
+          5. Metal ion concentration [M] <span class="chevron">&#9656;</span>
+        </div>
+        <div class="accordion-body"><div class="accordion-body-inner">
+          <b>Meaning:</b> [M] is the analytical concentration of the metal ion, typically evaluated at the equivalence point. It matters because feasibility is not judged from K&prime; alone — a moderately stable complex can still titrate well if the concentration is high enough, and a very stable complex can fail at extremely dilute concentrations. This is why the feasibility criterion in this tool is the <b>product</b> K&prime;&times;[M], not K&prime; by itself.
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div id="termPopover"><span class="tp-close" onclick="hideTerm()">&times;</span><div class="tp-title" id="tpTitle"></div><div id="tpBody"></div></div>
+
+<footer>
+  Complexometric Titration Assistant &middot; Educational tool for introductory analytical chemistry. Formation constants (log K) are approximate literature values at ~0.1 M ionic strength and 20&ndash;25&deg;C; EDTA pK<sub>a</sub> values are standard textbook values. Always confirm against your course's reference tables before using these numbers in a lab report.
+</footer>
+
+<script>
+/* ==========================================================================
+   COMPLEXOMETRIC TITRATION ASSISTANT — CORE SCIENCE ENGINE
+   All chemistry lives in this section so every "Mode" in the UI can reuse
+   the same, internally-consistent equations.
+   ========================================================================== */
+
+// ---- V2: generic n-protic chelating-agent engine ---------------------------
+// Version 1 only understood EDTA (a tetraprotic H4Y system). Version 2 keeps
+// EDTA's exact numbers but generalises the underlying maths to ANY n-protic
+// ligand, so a student can model NTA, EGTA, DTPA, or a fully custom ligand
+// just by supplying its pKa values — the same alpha-fraction / K' equations
+// are reused unchanged.
+const LIGAND_PRESETS = {
+  EDTA:  { pKa:[2.00, 2.67, 6.16, 10.26],        symbol:"Y" },
+  NTA:   { pKa:[1.10, 1.65, 2.94, 10.28],        symbol:"L" },
+  EGTA:  { pKa:[2.00, 2.68, 8.85, 9.46],          symbol:"L" },
+  DTPA:  { pKa:[1.99, 2.60, 4.28, 8.60, 10.41],   symbol:"L" }
+};
+
+// Currently active ligand: { name (free text, shown in every answer),
+// pKa (array used by the maths engine), symbol (used only for species labels) }
+let currentLigand = { name:"EDTA", pKa:[...LIGAND_PRESETS.EDTA.pKa], symbol:"Y" };
+
+const SUP_DIGIT = {0:"\u2070",1:"\u00B9",2:"\u00B2",3:"\u00B3",4:"\u2074",5:"\u2075",6:"\u2076",7:"\u2077",8:"\u2078",9:"\u2079"};
+const SUB_DIGIT = {0:"\u2080",1:"\u2081",2:"\u2082",3:"\u2083",4:"\u2084",5:"\u2085",6:"\u2086",7:"\u2087",8:"\u2088",9:"\u2089"};
+const toSub = n => String(n).split("").map(d => SUB_DIGIT[d]).join("");
+const toSupCharge = n => (n === 1 ? "" : String(n).split("").map(d => SUP_DIGIT[d]).join("")) + "\u207B";
+
+// Palette large enough for the longest supported ligand (DTPA, 6 species)
+const SPECIES_PALETTE = ["#8C2F39", "#B4636C", "#C9A227", "#4E8C8F", "#1F6F78", "#5B3E8C", "#2E6B4F"];
+
+/**
+ * Build human-readable species labels for an n-protic ligand HnL, generalising
+ * EDTA's familiar H4Y -> H3Y- -> H2Y2- -> HY3- -> Y4- pattern to any n.
+ */
+function buildSpeciesLabels(pKaArray, symbol){
+  const n = pKaArray.length;
+  const labels = [];
+  for (let i = 0; i <= n; i++){
+    const protons = n - i;   // protons still attached
+    const charge = i;        // magnitude of negative charge (0..n)
+    let label = protons > 0 ? ("H" + (protons > 1 ? toSub(protons) : "")) : "";
+    label += symbol;
+    if (charge > 0) label += toSupCharge(charge);
+    labels.push(label);
+  }
+  return labels;
+}
+function currentSpeciesLabels(){ return buildSpeciesLabels(currentLigand.pKa, currentLigand.symbol); }
+function currentSpeciesColors(){ return SPECIES_PALETTE.slice(0, currentLigand.pKa.length + 1); }
+
+// ---- Reference formation constants (log K) for common metal-EDTA pairs ---
+const METALS = {
+  "Mg\u00B2\u207A": 8.79,
+  "Ca\u00B2\u207A": 10.65,
+  "Zn\u00B2\u207A": 16.50,
+  "Ni\u00B2\u207A": 18.60,
+  "Pb\u00B2\u207A": 18.00,
+  "Cu\u00B2\u207A": 18.80,
+  "Al\u00B3\u207A": 16.30,
+  "Fe\u00B3\u207A": 25.10
+};
+
+const FEASIBILITY_THRESHOLD = 1e6; // K' x [M] must exceed this
+
+/**
+ * alphaFractions(pH)
+ * ------------------------------------------------------------------
+ * Chemistry -> code translation:
+ * For a polyprotic acid H4Y with four dissociation constants, the
+ * fraction of each protonation state present at a given [H+] is a
+ * standard "alpha fraction" calculation:
+ *
+ *   D = [H+]^4 + Ka1[H+]^3 + Ka1*Ka2[H+]^2 + Ka1*Ka2*Ka3[H+] + Ka1*Ka2*Ka3*Ka4
+ *
+ *   alpha(H4Y)   = [H+]^4                       / D
+ *   alpha(H3Y-)  = Ka1[H+]^3                     / D
+ *   alpha(H2Y2-) = Ka1*Ka2[H+]^2                 / D
+ *   alpha(HY3-)  = Ka1*Ka2*Ka3[H+]                / D
+ *   alpha(Y4-)   = Ka1*Ka2*Ka3*Ka4                / D
+ *
+ * Returns an object with the 5 fractions (each 0..1, summing to 1)
+ * and the denominator D (reused to compute alphaY(H) below).
+ */
+function alphaFractions(pH, pKaArray = currentLigand.pKa){
+  const H = Math.pow(10, -pH);
+  const Ka = pKaArray.map(pk => Math.pow(10, -pk));
+  const n = Ka.length;
+
+  // terms[0] = [H+]^n  (fully protonated HnL)
+  // terms[i] = (Ka1*Ka2*...*Kai) * [H+]^(n-i)   for i = 1..n
+  const terms = [Math.pow(H, n)];
+  let cumKa = 1;
+  for (let i = 1; i <= n; i++){
+    cumKa *= Ka[i - 1];
+    terms.push(cumKa * Math.pow(H, n - i));
+  }
+
+  const D = terms.reduce((a, b) => a + b, 0);
+
+  return {
+    D,
+    productKaAll: cumKa, // Ka1*Ka2*...*Kan, reused below
+    fractions: terms.map(t => t / D)
+  };
+}
+
+/**
+ * logAlphaYH(pH)
+ * ------------------------------------------------------------------
+ * Chemistry: alphaY(H) is defined such that
+ *     K' = K / alphaY(H)   <=>   log K' = log K - log alphaY(H)
+ * and alphaY(H) = (total dissolved EDTA) / [Y4-] = 1 / fraction(Y4-)
+ *              = D / (Ka1*Ka2*Ka3*Ka4)
+ * So log10(alphaY(H)) = log10(D) - log10(Ka1*Ka2*Ka3*Ka4).
+ * This is always >= 0, and shrinks toward 0 as pH increases.
+ */
+function logAlphaYH(pH){
+  const { D, productKaAll } = alphaFractions(pH);
+  return Math.log10(D) - Math.log10(productKaAll);
+}
+
+// ---- small formatting helpers ---------------------------------------------
+function fmt(num, digits = 3){
+  if (!isFinite(num)) return "—";
+  return Number(num.toFixed(digits)).toString();
+}
+function sci(num){
+  if (!isFinite(num) || num === 0) return "0";
+  const exp = Math.floor(Math.log10(Math.abs(num)));
+  const mant = num / Math.pow(10, exp);
+  return `${fmt(mant,2)} \u00D7 10<sup>${exp}</sup>`;
+}
+
+/* ==========================================================================
+   UI WIRING — tabs, hero speciation demo, accordion
+   ========================================================================== */
+
+// Tab / mode switching
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(btn.dataset.panel).classList.add("active");
+  });
+});
+
+// Accordion (Learn section)
+function toggleAccordion(headEl){
+  headEl.parentElement.classList.toggle("open");
+}
+
+/* ==========================================================================
+   FINAL FEATURE — "Load Example" and "Reset" for Mode 1
+   Gives a first-time student a known-good worked example (Zn2+ / EDTA at
+   pH 5.0) to see how the tool is meant to be used, and a quick way to
+   clear everything and start again.
+   ========================================================================== */
+function loadExample(){
+  // Make sure the ligand configuration matches the example (EDTA preset)
+  document.getElementById("ligandPreset").value = "EDTA";
+  onLigandPresetChange();
+
+  document.getElementById("m1_metalName").value = "Zn\u00B2\u207A";
+  document.getElementById("m1_pH").value = 5.0;
+  document.getElementById("m1_logK").value = 16.50;
+  document.getElementById("m1_logAlpha").value = 6.45;
+  document.getElementById("m1_conc").value = 0.01;
+
+  // Make sure Mode 1's tab is showing, then run the calculation immediately
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  document.querySelector('.tab-btn[data-panel="mode1"]').classList.add("active");
+  document.getElementById("mode1").classList.add("active");
+
+  runMode1();
+}
+
+function resetMode1(){
+  ["m1_metalName","m1_pH","m1_logK","m1_logAlpha","m1_conc"].forEach(id => {
+    document.getElementById(id).value = "";
+  });
+  document.getElementById("m1_error").classList.remove("show");
+  document.getElementById("m1_results").classList.add("hidden");
+  document.getElementById("m1_steps").innerHTML = "";
+}
+
+/* ==========================================================================
+   V2 — CLICKABLE VARIABLE GLOSSARY (Feature 4)
+   Every key variable in the app (log K, K', alpha, etc.) is wrapped in a
+   <span class="term" onclick="showTerm(event,'key')"> so a student can click
+   it anywhere it appears — not just in the "Learn the variables" tab — and
+   get a short popover explanation.
+   ========================================================================== */
+const GLOSSARY = {
+  logK: {
+    title: "log K — intrinsic formation constant",
+    body: "Represents the strength of metal-ligand binding when the ligand is 100% available in its most reactive, fully deprotonated form. It is a fixed, tabulated number for a given metal\u2013ligand pair and does not change with pH."
+  },
+  alpha: {
+    title: "\u03B1(H) — ligand availability (side-reaction) factor",
+    body: "Fraction-based correction factor describing how much of the total dissolved chelating agent is tied up as protonated species instead of being available in its fully deprotonated, metal-binding form. Larger at low pH, and shrinks toward 1 (in log terms, toward 0) as pH rises."
+  },
+  Kprime: {
+    title: "K\u2032 — conditional formation constant",
+    body: "The effective formation constant under actual experimental conditions (mainly pH). log K\u2032 = log K \u2212 log \u03B1(H). K\u2032 is always \u2264 K, and it is K\u2032 \u2014 not K \u2014 that determines whether a titration's endpoint will be sharp."
+  },
+  KM: {
+    title: "K\u2032[M] — feasibility product",
+    body: "The product of the conditional formation constant and the metal ion's concentration at the equivalence point. The rule-of-thumb threshold K\u2032[M] > 10\u2076 means the complexation reaction is essentially complete (\u226599.9%), giving a sharp, reliable titration endpoint."
+  },
+  pH: {
+    title: "pH",
+    body: "Controls how many protons are attached to the chelating agent, and therefore how much of its fully deprotonated (metal-binding) form is available. In practice, pH is usually fixed with a buffer so that \u03B1(H) \u2014 and hence K\u2032 \u2014 stays constant throughout the titration."
+  },
+  conc: {
+    title: "[M] — metal ion concentration",
+    body: "The analytical concentration of the metal ion, typically evaluated at the equivalence point. Feasibility depends on the product K\u2032\u00D7[M], not on K\u2032 alone \u2014 a moderately stable complex can still titrate well at high concentration, and a very stable one can fail if too dilute."
+  }
+};
+
+function showTerm(evt, key){
+  evt.stopPropagation();
+  // Several terms live inside <label> elements; without preventDefault the
+  // browser also forwards this click to the label's associated input,
+  // firing a second click that would immediately close the popover again.
+  evt.preventDefault();
+  const entry = GLOSSARY[key];
+  if (!entry) return;
+  const pop = document.getElementById("termPopover");
+  document.getElementById("tpTitle").textContent = entry.title;
+  document.getElementById("tpBody").textContent = entry.body;
+
+  // Position near the clicked term, but keep it fully on-screen
+  const rect = evt.target.getBoundingClientRect();
+  const popWidth = 290;
+  let left = Math.min(rect.left, window.innerWidth - popWidth - 16);
+  left = Math.max(8, left);
+  let top = rect.bottom + 8;
+  if (top > window.innerHeight - 140) top = rect.top - 8; // flip above if near bottom
+  pop.style.left = `${left}px`;
+  pop.style.top = `${top > rect.top ? top : top}px`;
+  if (top < rect.top) pop.style.transform = "translateY(-100%)"; else pop.style.transform = "none";
+  pop.classList.add("show");
+}
+function hideTerm(){
+  document.getElementById("termPopover").classList.remove("show");
+}
+document.addEventListener("click", (e) => {
+  const pop = document.getElementById("termPopover");
+  if (pop.classList.contains("show") && !pop.contains(e.target) && !e.target.classList.contains("term")){
+    hideTerm();
+  }
+});
+
+// Populate the hero speciation legend — rebuilt whenever the ligand changes,
+// since the number and identity of species depends on how many pKa values
+// the current ligand has.
+function buildLegend(){
+  const legend = document.getElementById("heroLegend");
+  const labels = currentSpeciesLabels();
+  const colors = currentSpeciesColors();
+  legend.innerHTML = labels.map((name, i) =>
+    `<span><i style="background:${colors[i]}"></i>${name}</span>`
+  ).join("");
+}
+buildLegend();
+
+// Render the stacked speciation bar AND its percentage readout for a given pH
+function renderStack(targetStackId, pH){
+  const { fractions } = alphaFractions(pH);
+  const labels = currentSpeciesLabels();
+  const colors = currentSpeciesColors();
+  const stackEl = document.getElementById(targetStackId);
+  stackEl.innerHTML = fractions.map((f, i) =>
+    `<div style="width:${(f*100).toFixed(2)}%; background:${colors[i]}" title="${labels[i]}: ${(f*100).toFixed(1)}%"></div>`
+  ).join("");
+
+  // Percentage row only makes sense under the hero stack (id-scoped)
+  const pctRow = document.getElementById("heroPctRow");
+  if (pctRow && targetStackId === "heroStack"){
+    pctRow.innerHTML = fractions.map((f, i) =>
+      `<div style="width:${(f*100).toFixed(2)}%;">${(f*100).toFixed(0)}%</div>`
+    ).join("");
+  }
+}
+
+// Hero live pH slider
+const heroRange = document.getElementById("heroPhRange");
+const heroReadout = document.getElementById("heroPhReadout");
+function updateHero(){
+  const pH = parseFloat(heroRange.value);
+  heroReadout.textContent = `pH ${pH.toFixed(1)}`;
+  renderStack("heroStack", pH);
+
+  // Educational readout: which species dominates, and what that means
+  const { fractions } = alphaFractions(pH);
+  const labels = currentSpeciesLabels();
+  const fullyDeprotonated = fractions[fractions.length - 1];
+  document.getElementById("heroSpeciesExplain").innerHTML =
+    `At pH ${pH.toFixed(1)}, the fully deprotonated, metal-binding form <b>${labels[labels.length-1]}</b> makes up <b>${(fullyDeprotonated*100).toFixed(1)}%</b> of dissolved ${currentLigand.name}. Only this fully deprotonated form strongly binds metal ions &mdash; at lower pH, ${currentLigand.name} becomes increasingly protonated, which reduces complex formation and lowers K&prime;.`;
+}
+heroRange.addEventListener("input", updateHero);
+
+/* ==========================================================================
+   V2 — CHELATING AGENT (LIGAND) CONFIGURATION
+   Lets a student swap out EDTA for another ligand (or a fully custom one)
+   without touching the maths above: every calculator just reads
+   currentLigand.pKa and currentLigand.name.
+   ========================================================================== */
+function refreshLigandUI(){
+  document.getElementById("heroLigandLabel").textContent = currentLigand.name;
+  buildLegend();
+  updateHero();
+
+  const m3Explain = document.getElementById("m3_explain");
+  if (m3Explain){
+    m3Explain.innerHTML = `Raising the pH removes protons from ${currentLigand.name}, shifting its speciation toward the fully deprotonated, metal-binding form. This lowers &alpha;<sub>(H)</sub> and raises K&prime;, generally making the titration <i>more</i> feasible at higher pH — but only up to the point where the metal itself starts to precipitate as a hydroxide, which this simple tool does not check for. Use the table above (or the auto-scan) to find the lowest pH at which K&prime;[M] first clears the 10&#8310; threshold; that is typically the practical lower pH limit for the titration.`;
+  }
+  const m4Explain = document.getElementById("m4_explain");
+  if (m4Explain){
+    m4Explain.innerHTML = `At a fixed pH, all metals share the same &alpha;<sub>(H)</sub>, so differences in feasibility come entirely from differences in intrinsic <b>log K</b>. Metals with weak intrinsic complexes with ${currentLigand.name} (e.g. Mg&sup2;&#8314;, Ca&sup2;&#8314;) generally need a <i>higher</i> pH to be titrated successfully, while metals with very strong complexes (e.g. Fe&sup3;&#8314;, Cu&sup2;&#8314;) can be titrated even at low pH — which is also how selective, pH-controlled titrations of metal mixtures are designed in the lab.`;
+  }
+}
+
+function onLigandPresetChange(){
+  const preset = document.getElementById("ligandPreset").value;
+  const nameField = document.getElementById("ligandName");
+  const customField = document.getElementById("ligandCustomPkaField");
+  const note = document.getElementById("ligandNote");
+
+  if (preset === "CUSTOM"){
+    customField.classList.remove("hidden");
+    nameField.value = "";
+    note.innerHTML = "Enter your ligand's name above and its pKa values (lowest to highest) in the field on the right — the same &alpha;<sub>(H)</sub> / K&prime; equations will be applied automatically, whatever the ligand.";
+    return;
+  }
+  customField.classList.add("hidden");
+  const data = LIGAND_PRESETS[preset];
+  currentLigand = { name: preset, pKa: [...data.pKa], symbol: data.symbol };
+  nameField.value = preset;
+  note.innerHTML = `Using ${preset}'s literature pKa values (${data.pKa.map(v => v.toFixed(2)).join(", ")}). Choose a different preset, or "Custom ligand" to model any other chelating agent.`;
+  refreshLigandUI();
+}
+
+// Editing the name field only re-labels the outputs — it does not change the
+// underlying pKa data unless the preset is "Custom" (handled below).
+function onLigandNameEdit(){
+  const name = document.getElementById("ligandName").value.trim();
+  currentLigand.name = name || "the ligand";
+  refreshLigandUI();
+}
+
+function onLigandCustomPka(){
+  const raw = document.getElementById("ligandCustomPka").value;
+  const note = document.getElementById("ligandNote");
+  const values = raw.split(",").map(s => parseFloat(s.trim())).filter(v => !isNaN(v));
+  if (values.length === 0){
+    note.innerHTML = "Enter at least one numeric pKa value, separated by commas (e.g. 2.0, 6.3, 10.1).";
+    return;
+  }
+  values.sort((a, b) => a - b); // low -> high, matching H_nL -> L^n-
+  currentLigand.pKa = values;
+  currentLigand.symbol = "L";
+  currentLigand.name = document.getElementById("ligandName").value.trim() || "the custom ligand";
+  note.innerHTML = `Modelling ${currentLigand.name} as a ${values.length}-protic acid with pKa = ${values.map(v=>v.toFixed(2)).join(", ")}. This is a simplification for teaching purposes — real polyprotic ligands may have additional side reactions not captured here.`;
+  refreshLigandUI();
+}
+
+refreshLigandUI();
+
+/* ==========================================================================
+   MODE 1 — Conditional formation constant from log K and log alphaY(H)
+   ========================================================================== */
+function runMode1(){
+  const logKInput = document.getElementById("m1_logK").value;
+  const logAlphaInput = document.getElementById("m1_logAlpha").value;
+  const pHInput = document.getElementById("m1_pH").value;
+  const errorBox = document.getElementById("m1_error");
+  const resultsBox = document.getElementById("m1_results");
+
+  // Input validation: prevent calculation if values are missing / invalid
+  if (logKInput === "" || logAlphaInput === "" || pHInput === "" ||
+      isNaN(logKInput) || isNaN(logAlphaInput) || isNaN(pHInput)){
+    errorBox.textContent = "Please enter numeric values for pH, log K, and log \u03B1\u1D67(\u1D34).";
+    errorBox.classList.add("show");
+    resultsBox.classList.add("hidden");
+    return;
+  }
+  const pH = parseFloat(pHInput);
+  if (pH < 0 || pH > 14){
+    errorBox.textContent = "pH must be between 0 and 14.";
+    errorBox.classList.add("show");
+    resultsBox.classList.add("hidden");
+    return;
+  }
+  errorBox.classList.remove("show");
+
+  const logK = parseFloat(logKInput);
+  const logAlpha = parseFloat(logAlphaInput);
+  const logKprime = logK - logAlpha;
+  const Kprime = Math.pow(10, logKprime);
+
+  // Optional fields — used only to personalise the Final Answer card
+  const metalName = (document.getElementById("m1_metalName").value || "").trim() || "the metal ion";
+  const concInput = document.getElementById("m1_conc").value;
+  const hasConc = concInput !== "" && !isNaN(concInput) && parseFloat(concInput) > 0;
+
+  // Cross-check: compare the student's entered log alphaY(H) against the value
+  // this tool's own EDTA-speciation engine computes at the same pH (Mode 3's
+  // engine, reused here). This does not block the calculation — it is purely
+  // a teaching aid to help catch a mis-read value from a table.
+  const engineLogAlpha = logAlphaYH(pH);
+  const alphaDiff = Math.abs(engineLogAlpha - logAlpha);
+  const alphaCheckLine = alphaDiff > 0.5
+    ? `\n\nNote: this tool's own EDTA-speciation model gives log \u03B1\u1D67(\u1D34) \u2248 ${fmt(engineLogAlpha)} at pH ${fmt(pH,1)}, which differs from the ${fmt(logAlpha)} you entered — double-check the value against your reference table.`
+    : `\n(Cross-check: this tool's EDTA-speciation model gives log \u03B1\u1D67(\u1D34) \u2248 ${fmt(engineLogAlpha)} at pH ${fmt(pH,1)}, consistent with your entry.)`;
+
+  document.getElementById("m1_steps").innerHTML =
+    `<span class="step-line">pH condition: ${fmt(pH,1)}</span>
+<span class="step-line">log \u03B1\u1D67(\u1D34) at this pH: ${fmt(logAlpha)}</span>
+
+<span class="step-line">Step 1 — Write the conditional formation constant equation:</span>
+<span class="step-line eq">log K' = log K \u2212 log \u03B1\u1D67(\u1D34)</span>
+
+<span class="step-line">Step 2 — Substitute the given values:</span>
+<span class="step-line eq">log K' = ${fmt(logK)} \u2212 ${fmt(logAlpha)}</span>
+<span class="step-line eq">log K' = ${fmt(logKprime)}</span>
+
+<span class="step-line">Step 3 — Convert to K' by taking the antilog:</span>
+<span class="step-line eq">K' = 10^(${fmt(logKprime)})</span>
+<span class="step-line eq">K' = ${sci(Kprime)}</span>${alphaCheckLine}`;
+
+  document.getElementById("m1_explain").innerHTML =
+    `The <b>conditional formation constant K&prime;</b> represents the effective stability of the ${metalName}&ndash;${currentLigand.name} complex at pH ${fmt(pH,1)}. pH affects ${currentLigand.name} availability because only the fully deprotonated form binds metal ions strongly — at any pH other than very high pH, some ${currentLigand.name} is tied up as protonated species instead. K&prime; is always &le; K, and it is K&prime; — not K — that determines how the titration will actually behave on the bench at this pH.`;
+
+  // ---- Final Answer card ----
+  const finalCard = document.getElementById("m1_finalCard");
+  const numBox = document.getElementById("m1_final_num");
+  const interpBox = document.getElementById("m1_final_interp");
+  const labBox = document.getElementById("m1_final_lab");
+  const recoBox = document.getElementById("m1_final_reco");
+
+  if (hasConc){
+    // Enough information was given to also run the feasibility test
+    const conc = parseFloat(concInput);
+    const product = Kprime * conc;
+    const feasible = product > FEASIBILITY_THRESHOLD;
+
+    finalCard.className = `final-card ${feasible ? "pass" : "fail"}`;
+    numBox.innerHTML = `pH condition: ${fmt(pH,1)}\nlog \u03B1\u1D67(\u1D34): ${fmt(logAlpha)}\n\nConditional Formation Constant:\nlog K' = ${fmt(logKprime)}\nK' = ${sci(Kprime)}\n\nK'[${metalName}] = ${sci(Kprime)} \u00D7 ${sci(conc)} = ${sci(product)}`;
+    interpBox.innerHTML = feasible
+      ? `Since K'[${metalName}] is <b>greater than 10\u2076</b>, complex formation between ${metalName} and ${currentLigand.name} is sufficiently complete at pH ${fmt(pH,1)}. Therefore, quantitative ${currentLigand.name} titration is possible under these conditions.`
+      : `Since K'[${metalName}] does <b>not exceed 10\u2076</b> at pH ${fmt(pH,1)}, complex formation is not complete enough for a sharp, quantitative endpoint under these conditions.`;
+    labBox.textContent = feasible
+      ? `In a real titration buffered at pH ${fmt(pH,1)}, ${currentLigand.name} will bind essentially all of the ${metalName} present, so the volume of titrant used — and the concentration calculated from it — can be considered reliable.`
+      : `In a real titration at pH ${fmt(pH,1)}, a meaningful fraction of ${metalName} may remain unbound near the equivalence point, giving a gradual colour change (or drifting electrode reading) and an unreliable endpoint.`;
+    recoBox.textContent = feasible
+      ? `Recommended: quantitative ${currentLigand.name} titration can be performed under these conditions.`
+      : "Recommendation: adjust conditions such as pH, ligand choice, or analytical method — then re-check with Mode 2 or Mode 3.";
+  } else {
+    // No concentration given — report K' itself and its chemical meaning only
+    finalCard.className = "final-card neutral";
+    numBox.innerHTML = `pH condition: ${fmt(pH,1)}\nlog \u03B1\u1D67(\u1D34): ${fmt(logAlpha)}\n\nConditional Formation Constant:\nlog K' = ${fmt(logKprime)}\nK' = ${sci(Kprime)}`;
+    interpBox.innerHTML = `This K' value describes how stable ${metalName}'s complex with ${currentLigand.name} is at pH ${fmt(pH,1)} — but feasibility for an actual titration also depends on the metal ion's concentration.`;
+    labBox.textContent = `A larger K' means the complex will form more completely on the bench at this pH, but you cannot yet say whether the titration will be quantitative without also knowing [${metalName}].`;
+    recoBox.textContent = "Recommendation: add a metal concentration above (or use Mode 2) to get a full feasibility verdict for this K' value.";
+  }
+
+  resultsBox.classList.remove("hidden");
+}
+
+/* ==========================================================================
+   MODE 2 — Titration feasibility from K' and [Metal]
+   ========================================================================== */
+function runMode2(){
+  const logKpInput = document.getElementById("m2_logKp").value;
+  const concInput = document.getElementById("m2_conc").value;
+  const errorBox = document.getElementById("m2_error");
+  const resultsBox = document.getElementById("m2_results");
+
+  if (logKpInput === "" || concInput === "" || isNaN(logKpInput) || isNaN(concInput)){
+    errorBox.textContent = "Please enter numeric values for both log K' and the metal ion concentration.";
+    errorBox.classList.add("show");
+    resultsBox.classList.add("hidden");
+    return;
+  }
+  if (parseFloat(concInput) <= 0){
+    errorBox.textContent = "Metal ion concentration must be greater than zero.";
+    errorBox.classList.add("show");
+    resultsBox.classList.add("hidden");
+    return;
+  }
+  errorBox.classList.remove("show");
+
+  const logKp = parseFloat(logKpInput);
+  const Kp = Math.pow(10, logKp);
+  const conc = parseFloat(concInput);
+  const product = Kp * conc;
+  const feasible = product > FEASIBILITY_THRESHOLD;
+  const metalName = (document.getElementById("m2_metalName").value || "").trim() || "the metal ion";
+
+  document.getElementById("m2_steps").innerHTML =
+    `<span class="step-line">Step 1 — Recover K' from log K':</span>
+<span class="step-line eq">K' = 10^(${fmt(logKp)}) = ${sci(Kp)}</span>
+
+<span class="step-line">Step 2 — Apply the feasibility criterion, K' \u00D7 [M]:</span>
+<span class="step-line eq">K' \u00D7 [M] = ${sci(Kp)} \u00D7 ${sci(conc)}</span>
+<span class="step-line eq">K' \u00D7 [M] = ${sci(product)}</span>
+
+<span class="step-line">Step 3 — Compare against the threshold 10\u2076:</span>
+<span class="step-line eq">${sci(product)} ${feasible ? "&gt;" : "\u2264"} 10\u2076</span>`;
+
+  // ---- Final Answer card ----
+  const finalCard = document.getElementById("m2_finalCard");
+  finalCard.className = `final-card ${feasible ? "pass" : "fail"}`;
+
+  document.getElementById("m2_final_num").innerHTML =
+    `Conditional Formation Constant:\nlog K' = ${fmt(logKp)}\nK' = ${sci(Kp)}`;
+
+  document.getElementById("m2_final_conclusion").innerHTML =
+    `K'[${metalName}]\n=\n(${sci(Kp)})(${sci(conc)})\n=\n${sci(product)}`;
+
+  document.getElementById("m2_final_interp").innerHTML = feasible
+    ? `Since K'[${metalName}] is <b>greater than 10\u2076</b>, the ${metalName}&ndash;${currentLigand.name} complex formation is sufficiently complete. Therefore, quantitative ${currentLigand.name} titration is possible under these conditions.`
+    : `Since K'[${metalName}] is <b>not greater than 10\u2076</b>, complex formation between ${metalName} and ${currentLigand.name} is not sufficiently complete for a reliable quantitative titration under these conditions.`;
+
+  document.getElementById("m2_final_lab").textContent = feasible
+    ? `${currentLigand.name} will bind almost all ${metalName} ions present, so the measured concentration from this titration can be considered reliable.`
+    : `A significant fraction of ${metalName} will remain uncomplexed near the equivalence point, producing a gradual, hard-to-read endpoint and an unreliable measured concentration.`;
+
+  document.getElementById("m2_final_reco").textContent = feasible
+    ? `Recommended: quantitative ${currentLigand.name} titration can be performed under these conditions.`
+    : "Recommendation: adjust conditions such as pH, ligand choice, or analytical method — use Mode 3 to search for a more suitable pH.";
+
+  resultsBox.classList.remove("hidden");
+}
+
+/* ==========================================================================
+   MODE 3 — Suitable pH finder (build a comparison table across pH values)
+   ========================================================================== */
+function populateMetalSelect(selectId){
+  const sel = document.getElementById(selectId);
+  Object.keys(METALS).forEach(name => {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = `${name}  (log K = ${METALS[name]})`;
+    sel.appendChild(opt);
+  });
+}
+populateMetalSelect("m3_metal");
+
+function onMetalPreset(prefix){
+  const sel = document.getElementById(`${prefix}_metal`);
+  const logKField = document.getElementById(`${prefix}_logK`);
+  const nameField = document.getElementById(`${prefix}_metalName`);
+  if (sel.value && METALS[sel.value] !== undefined){
+    logKField.value = METALS[sel.value];
+    if (nameField) nameField.value = sel.value;
+  }
+}
+
+// Keeps a running record of every pH tested in Mode 3, so the Final Answer
+// card can report the lowest pH found so far that clears the feasibility
+// threshold — this is the "future pH calculations can be added" structure.
+let m3Rows = [];
+
+/**
+ * Shared calculation core for Mode 3 — pure function, chemistry only:
+ * given the ligand's log K for a metal and its concentration, works out
+ * everything needed for one pH value. Reused by both the manual
+ * "add one pH" button and the automatic 0-14 scan.
+ */
+function computeM3Row(pH, logK, conc){
+  const logAlpha = logAlphaYH(pH);
+  const logKprime = logK - logAlpha;
+  const Kprime = Math.pow(10, logKprime);
+  const product = Kprime * conc;
+  return { pH, logAlpha, logKprime, Kprime, product, feasible: product > FEASIBILITY_THRESHOLD };
+}
+
+/**
+ * Three-tier suitability rating (Feature 2): plain "feasible / not feasible"
+ * is a hard cutoff, but in the lab there's a real difference between a
+ * titration that only just clears the bar and one that clears it by orders
+ * of magnitude. This buckets K'[M] into Not suitable / Suitable / Highly
+ * suitable, matching the pH-scan example in the spec.
+ */
+function classifySuitability(product){
+  if (product > FEASIBILITY_THRESHOLD * 100) return { label:"Highly suitable", cls:"tier-high" };
+  if (product > FEASIBILITY_THRESHOLD)       return { label:"Suitable",        cls:"tier-ok" };
+  return { label:"Not suitable", cls:"tier-none" };
+}
+
+// Appends one row to the on-screen table + remembers it for range/summary logic
+function pushM3Row(row){
+  const tier = classifySuitability(row.product);
+  const tbody = document.getElementById("m3_tbody");
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>${fmt(row.pH,1)}</td>
+    <td>${fmt(row.logAlpha)}</td>
+    <td>${fmt(row.logKprime)}</td>
+    <td>${sci(row.Kprime)}</td>
+    <td>${sci(row.product)}</td>
+    <td class="${row.feasible ? 'pass' : 'fail'}">${row.feasible ? '\u2705 Yes' : '\u274C No'}</td>
+    <td class="${tier.cls}">${tier.label}</td>`;
+  tbody.appendChild(tr);
+  m3Rows.push(row);
+}
+
+// Reads + validates the shared log K / concentration inputs. Returns null
+// (and shows the error box) if anything is missing.
+function readM3Inputs(){
+  const logKInput = document.getElementById("m3_logK").value;
+  const concInput = document.getElementById("m3_conc").value;
+  const errorBox = document.getElementById("m3_error");
+  if (logKInput === "" || concInput === "" || isNaN(logKInput) || isNaN(concInput)){
+    errorBox.textContent = "Please provide log K and the metal concentration first.";
+    errorBox.classList.add("show");
+    return null;
+  }
+  errorBox.classList.remove("show");
+  return { logK: parseFloat(logKInput), conc: parseFloat(concInput) };
+}
+
+function getM3MetalName(){
+  return (document.getElementById("m3_metalName").value || "").trim()
+    || (document.getElementById("m3_metal").value || "the metal ion");
+}
+
+function addPhRow(){
+  const pHInput = document.getElementById("m3_pH").value;
+  const errorBox = document.getElementById("m3_error");
+  const resultsBox = document.getElementById("m3_results");
+
+  const inputs = readM3Inputs();
+  if (pHInput === "" || isNaN(pHInput)){
+    errorBox.textContent = "Please provide log K, metal concentration, and a pH value before adding a row.";
+    errorBox.classList.add("show");
+    return;
+  }
+  if (!inputs) return;
+  const pH = parseFloat(pHInput);
+  if (pH < 0 || pH > 14){
+    errorBox.textContent = "pH must be between 0 and 14.";
+    errorBox.classList.add("show");
+    return;
+  }
+  errorBox.classList.remove("show");
+
+  const row = computeM3Row(pH, inputs.logK, inputs.conc);
+
+  // Step-by-step working for the most recently added pH value
+  document.getElementById("m3_lastSteps").innerHTML =
+    `<span class="step-line">Most recent row — pH ${fmt(pH,1)}:</span>
+<span class="step-line eq">log \u03B1<sub>(H)</sub> at this pH = ${fmt(row.logAlpha)}   (computed from ${currentLigand.name}'s pKa values)</span>
+<span class="step-line eq">log K' = ${fmt(inputs.logK)} \u2212 ${fmt(row.logAlpha)} = ${fmt(row.logKprime)}</span>
+<span class="step-line eq">K' = ${sci(row.Kprime)}</span>
+<span class="step-line eq">K' \u00D7 [M] = ${sci(row.Kprime)} \u00D7 ${sci(inputs.conc)} = ${sci(row.product)}</span>`;
+
+  pushM3Row(row);
+  updateM3FinalCard(row, inputs);
+  updateM3RangeBadge();
+  resultsBox.classList.remove("hidden");
+}
+
+/**
+ * Feature 2 — automatically scans the full pH 0-14 range (step 1 pH unit,
+ * covering the same ground the student would otherwise test by hand),
+ * fills the comparison table, and computes a recommended pH range.
+ */
+function autoScanPh(){
+  const inputs = readM3Inputs();
+  if (!inputs) return;
+  resetPhTable(false);
+
+  for (let pH = 0; pH <= 14; pH += 1){
+    pushM3Row(computeM3Row(pH, inputs.logK, inputs.conc));
+  }
+
+  document.getElementById("m3_lastSteps").innerHTML =
+    `<span class="step-line">Auto-scan complete — computed &alpha;<sub>(H)</sub>, K&prime;, and K&prime;[M] for pH 0 through 14 in 1-unit steps for log K = ${fmt(inputs.logK)}, [M] = ${sci(inputs.conc)}.</span>`;
+
+  updateM3FinalCard(m3Rows[m3Rows.length - 1], inputs);
+  updateM3RangeBadge();
+  document.getElementById("m3_results").classList.remove("hidden");
+}
+
+function updateM3FinalCard(row, inputs){
+  const metalName = getM3MetalName();
+  const finalCard = document.getElementById("m3_finalCard");
+  finalCard.className = `final-card ${row.feasible ? "pass" : "fail"}`;
+
+  document.getElementById("m3_final_num").innerHTML =
+    `At pH ${fmt(row.pH,1)}:\nlog \u03B1<sub>(H)</sub> = ${fmt(row.logAlpha)}\nlog K' = ${fmt(row.logKprime)}\nK' = ${sci(row.Kprime)}\nK'[${metalName}] = ${sci(row.product)}`;
+
+  document.getElementById("m3_final_interp").innerHTML = row.feasible
+    ? `At pH ${fmt(row.pH,1)}, K'[${metalName}] is <b>greater than 10\u2076</b>, so complex formation is sufficiently complete for a quantitative ${currentLigand.name} titration.`
+    : `At pH ${fmt(row.pH,1)}, K'[${metalName}] does <b>not exceed 10\u2076</b>, so this pH is not suitable for a quantitative ${currentLigand.name} titration.`;
+
+  document.getElementById("m3_final_lab").textContent = row.feasible
+    ? `Buffering the titration at around pH ${fmt(row.pH,1)} should give a sharp, reliable endpoint for ${metalName}.`
+    : `Running the titration at pH ${fmt(row.pH,1)} would likely give a gradual, hard-to-read endpoint for ${metalName} — this pH should be avoided.`;
+
+  const feasibleRows = m3Rows.filter(r => r.feasible);
+  if (feasibleRows.length > 0){
+    const bestPh = Math.min(...feasibleRows.map(r => r.pH));
+    document.getElementById("m3_final_reco").textContent =
+      `Recommended: of the pH values tested so far, pH ${fmt(bestPh,1)} is the lowest one that gives a feasible titration for ${metalName}.`;
+  } else {
+    document.getElementById("m3_final_reco").textContent =
+      "Recommendation: none of the pH values tested so far are feasible — try testing higher pH values.";
+  }
+}
+
+// Feature 2 — "Recommended pH range" summary banner underneath the table
+function updateM3RangeBadge(){
+  const badge = document.getElementById("m3_rangeBadge");
+  const metalName = getM3MetalName();
+  const feasibleRows = m3Rows.filter(r => r.feasible);
+
+  if (m3Rows.length < 2){
+    badge.classList.add("hidden");
+    return;
+  }
+  badge.classList.remove("hidden");
+
+  if (feasibleRows.length === 0){
+    badge.className = "range-badge none";
+    badge.innerHTML = `<b>No suitable pH found</b> in the range tested for ${metalName} with ${currentLigand.name} at this concentration — the conditional stability never exceeds the quantitative titration requirement (K&prime;[M] &gt; 10\u2076). Try a higher-affinity ligand or a more concentrated sample.`;
+    return;
+  }
+
+  const pHs = feasibleRows.map(r => r.pH);
+  const lo = Math.min(...pHs), hi = Math.max(...pHs);
+  badge.className = "range-badge";
+  badge.innerHTML = `<b>Recommended pH range: ${fmt(lo,1)} to ${fmt(hi,1)}.</b> The titration of ${metalName} with ${currentLigand.name} is suitable between pH ${fmt(lo,1)} and ${fmt(hi,1)} because the conditional stability (K&prime;[M]) remains above the quantitative titration requirement of 10\u2076 across this range.`;
+}
+
+function resetPhTable(hideResults = true){
+  document.getElementById("m3_tbody").innerHTML = "";
+  document.getElementById("m3_lastSteps").innerHTML = "";
+  document.getElementById("m3_rangeBadge").classList.add("hidden");
+  if (hideResults) document.getElementById("m3_results").classList.add("hidden");
+  m3Rows = [];
+}
+
+/* ==========================================================================
+   MODE 4 — Compare multiple metal ions at a fixed pH and concentration
+   ========================================================================== */
+function buildMetalCheckboxes(){
+  const wrap = document.getElementById("m4_checkboxes");
+  Object.keys(METALS).forEach((name, i) => {
+    const id = `m4_chk_${i}`;
+    const label = document.createElement("label");
+    label.style.cssText = "display:flex; align-items:center; gap:6px; font-family:var(--font-data); font-size:13.5px; font-weight:600; text-transform:none;";
+    label.innerHTML = `<input type="checkbox" id="${id}" value="${name}" ${i < 4 ? "checked" : ""}> ${name}`;
+    wrap.appendChild(label);
+  });
+}
+buildMetalCheckboxes();
+
+function runMode4(){
+  const pHInput = document.getElementById("m4_pH").value;
+  const concInput = document.getElementById("m4_conc").value;
+  const errorBox = document.getElementById("m4_error");
+  const resultsBox = document.getElementById("m4_results");
+
+  const selected = Array.from(document.querySelectorAll("#m4_checkboxes input:checked")).map(c => c.value);
+
+  if (pHInput === "" || concInput === "" || isNaN(pHInput) || isNaN(concInput)){
+    errorBox.textContent = "Please enter a numeric pH and metal concentration.";
+    errorBox.classList.add("show");
+    resultsBox.classList.add("hidden");
+    return;
+  }
+  if (selected.length === 0){
+    errorBox.textContent = "Please select at least one metal ion to compare.";
+    errorBox.classList.add("show");
+    resultsBox.classList.add("hidden");
+    return;
+  }
+  errorBox.classList.remove("show");
+
+  const pH = parseFloat(pHInput);
+  const conc = parseFloat(concInput);
+  const logAlpha = logAlphaYH(pH); // same for every metal at a fixed pH
+
+  const tbody = document.getElementById("m4_tbody");
+  tbody.innerHTML = "";
+  const feasibleMetals = [];
+  const notFeasibleMetals = [];
+
+  selected.forEach(metal => {
+    const logK = METALS[metal];
+    const logKprime = logK - logAlpha;
+    const Kprime = Math.pow(10, logKprime);
+    const product = Kprime * conc;
+    const feasible = product > FEASIBILITY_THRESHOLD;
+    (feasible ? feasibleMetals : notFeasibleMetals).push(metal);
+
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td style="font-family:var(--font-body); font-weight:700;">${metal}</td>
+      <td>${fmt(pH,1)}</td>
+      <td>${fmt(logK)}</td>
+      <td>${fmt(logAlpha)}</td>
+      <td>${fmt(logKprime)}</td>
+      <td>${sci(Kprime)}</td>
+      <td>${sci(product)}</td>
+      <td class="${feasible ? 'pass' : 'fail'}">${feasible ? '\u2705 Yes' : '\u274C No'}</td>`;
+    tbody.appendChild(row);
+  });
+
+  // ---- Final Answer / Recommendation card (summarises the whole comparison) ----
+  const finalCard = document.getElementById("m4_finalCard");
+  const allFeasible = notFeasibleMetals.length === 0;
+  const noneFeasible = feasibleMetals.length === 0;
+  finalCard.className = `final-card ${allFeasible ? "pass" : (noneFeasible ? "fail" : "neutral")}`;
+
+  document.getElementById("m4_final_interp").innerHTML =
+    `At pH ${fmt(pH,1)} with [M] = ${sci(conc)} mol/L: `
+    + (feasibleMetals.length > 0 ? `<b>${feasibleMetals.join(", ")}</b> clear the K'[M] &gt; 10\u2076 threshold. ` : "No selected metal clears the K'[M] &gt; 10\u2076 threshold. ")
+    + (notFeasibleMetals.length > 0 ? `<b>${notFeasibleMetals.join(", ")}</b> do not.` : "");
+
+  document.getElementById("m4_final_lab").textContent = noneFeasible
+    ? `None of the selected metals can be reliably titrated with ${currentLigand.name} at pH ${fmt(pH,1)} and this concentration.`
+    : (allFeasible
+      ? `All selected metals should give sharp, reliable ${currentLigand.name} endpoints at pH ${fmt(pH,1)} — a mixture of them could not be distinguished by pH control alone at this pH.`
+      : `At this pH, only the feasible metals listed above will give a reliable ${currentLigand.name} endpoint — this is the basis for pH-controlled selective titration of metal mixtures.`);
+
+  document.getElementById("m4_final_reco").textContent = noneFeasible
+    ? "Recommendation: raise the pH (see Mode 3) or choose a more selective method for these metals."
+    : (allFeasible
+      ? `Recommended: ${currentLigand.name} titration can be performed for all selected metals under these conditions.`
+      : `Recommendation: titrate ${feasibleMetals.join(", ")} directly at pH ${fmt(pH,1)}; raise the pH or use a masking agent before attempting ${notFeasibleMetals.join(", ")}.`);
+
+  resultsBox.classList.remove("hidden");
+}
+</script>
+</body>
+</html>
